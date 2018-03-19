@@ -1,0 +1,176 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset=utf-8 />
+  <title>Vacant properties In Richmond, CA</title>
+  <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+
+  <!-- latest version of CARTO.js -->
+  <script src="https://cartodb-libs.global.ssl.fastly.net/cartodb.js/v3/3.15/cartodb.js"></script>
+
+  <!-- style sheet for CARTO.js -->
+  <link rel="stylesheet" href="https://cartodb-libs.global.ssl.fastly.net/cartodb.js/v3/3.15/themes/css/cartodb.css" />
+  <!-- style sheet for google fonts -->
+  <link href='//fonts.googleapis.com/css?family=Vollkorn' rel='stylesheet' type='text/css'>
+
+  <style>
+  body {
+    margin: 0;
+    padding: 0;
+    background: whitesmoke;
+    font-family: "Vollkorn";
+    color: #0D0000;
+  }
+  header {
+    padding: 6px 10%;
+  }
+  #side-panel {
+    position: absolute;
+    left: 15px;
+    width: 300px;
+    margin: 20px auto;
+    padding: 0 15px;
+    background: rgba(256, 256, 256, .8);
+    border: 1px solid grey;
+    border-radius: 3px;
+    z-index: 800;
+  }
+  #map {
+    position: absolute;
+    width: 100%;
+    top: 0;
+    bottom: 0;
+  }
+  .info {
+    padding: 6px 8px;
+    width: auto;
+    font-size: 1em;
+    background: rgba(25,25,25,0.8);
+    box-shadow: 0 0 15px rgba(0,0,0,0.2);
+    border-radius: 5px;
+    text-align: left;
+    color: whitesmoke;
+  }
+  .info h3 {
+    margin: 0;
+  }
+
+  </style>
+
+</head>
+<body>
+
+  <div id='map'></div>
+
+  <section id="side-panel">
+    <h2>Vacant Properties In Richmond, CA</h2>
+
+    <p>This map shows vacant properties in Richmond, California as of 3/17/18</p>
+    <p>Data for the creation of this map comes from Richmond's Code Enforcement Unit</p>
+    <p>Map authored by <a href="https://bazini627.github.io" target="_blank">Matthew Bacinskas</a> for the HAT.</p>
+  </section>
+
+  <script>
+
+  // Object to hold our map options
+  var options = {
+    center: [37.943874, -122.38557],
+    zoom: 13,
+    minZoom: 13,
+    maxZoom: 18,
+    zoomControl: false,
+  },
+  map = L.map('map', options); // Create map object and pass it our options object from above
+
+  var houseMarkerOptions = {
+    radius: 4,
+    fillColor: "#ff0000",
+    color: "#000",
+    weight: 1,
+    opacity: 1,
+    fillOpacity: 0.8
+  };
+
+  // Load map tiles from CARTO and add to map
+  var tiles = L.tileLayer('https://cartodb-basemaps-{s}.global.ssl.fastly.net/rastertiles/voyager/{z}/{x}/{y}.png', {
+    attribution: '&copy; <a href="http://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="http://cartodb.com/attributions">CartoDB</a> | Map Authored by <a href="https://bazini627.github.io/" target="blank">Matthew Bacinskas</a>',
+    subdomains: 'abcd',
+    maxZoom: 19
+  }).addTo(map);
+
+  // Add zoom to bottom right
+  L.control.zoom({
+    position:'bottomright'
+  }).addTo(map);
+
+  // Use jquery to get geosjson from CARTO
+  $.getJSON("https://mjbmaps.carto.com/api/v2/sql?format=GeoJSON&q=SELECT * FROM mjbmaps.vacantproperties", function(data) {
+    dataLayer = L.geoJson(data, {
+      pointToLayer: function (feature, latlng) {
+       return L.circleMarker(latlng, houseMarkerOptions);
+   }
+ }).addTo(map);
+    drawMap();
+    drawInfo();
+    //console.log(data);
+  });
+
+  // Function to draw our map
+  function drawMap() {
+
+    // Loop through layers of GeoJSON and set style
+    dataLayer.eachLayer(function(layer) {
+
+      layer.on('mouseover', function() {
+
+        updateInfo(this);
+        $(".info").show(); // display the info panel
+      })
+
+      dataLayer.on('mouseout', function() {
+          $(".info").hide();  // hide the info panel
+      });
+    })
+  }
+
+  // Function to draw infowindow
+  function drawInfo() {
+
+      // create a new Leaflet control object and position top right
+      var info = L.control({position: 'topright'});
+
+      // when adding control to map
+      info.onAdd = function(map) {
+
+          // create a new div with class of info
+          var div = L.DomUtil.create('div', 'info');
+
+          // return div to control object
+          return div;
+
+      }
+
+      // add the empty info div to the map
+      info.addTo(map);
+
+      // select the info panel and hide it
+      $(".info").hide();
+  }
+
+  // Function to update infowindow
+  function updateInfo(layer) {
+
+      // create shortcut for accessing properties
+      var props = layer.feature.properties;
+      // build an HTML string of relevant information about a property
+         var html = "<b>Address: </b> " + props.location;
+         //+ "<br>" + "<b>Case Number: </b>" + props.crw + "<br>" + "<b>Tag Date: </b>" + props.tag_date + "<br>" + "<b>CEO: </b>" + props.ceo + "<br>" + "<b>Comment: </b>" + props.comment;
+
+      // insert HTML content into empty info panel
+      $(".info").html(html);
+  }
+
+  </script>
+
+</body>
+</html>
